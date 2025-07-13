@@ -63,4 +63,8 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Large files
+*.run
+cuda_*.run 
