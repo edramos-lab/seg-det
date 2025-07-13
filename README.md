@@ -173,6 +173,78 @@ To use GPU acceleration and export to TensorRT, you must have the correct NVIDIA
   - [TensorRT Downloads](https://developer.nvidia.com/tensorrt)  
   - [TensorRT Installation Guide](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html)
 
+---
+
+### Installing CUDA 11.4, cuDNN 8.6.0, and TensorRT 8.5.2 (Recommended for RTX 3050)
+
+These versions are fully compatible with the RTX 3050 and this repository.
+
+#### 1. Install NVIDIA Driver
+Make sure you have the latest NVIDIA driver (at least 470.x for CUDA 11.4):
+```bash
+sudo ubuntu-drivers autoinstall
+nvidia-smi
+```
+
+#### 2. Install CUDA 11.4
+- Download the [CUDA 11.4 runfile (local)](https://developer.nvidia.com/cuda-11.4.0-download-archive) for Ubuntu.
+- Follow the official [CUDA 11.4 installation guide](https://docs.nvidia.com/cuda/archive/11.4.0/cuda-installation-guide-linux/index.html).
+
+**Quick install:**
+```bash
+wget https://developer.download.nvidia.com/compute/cuda/11.4.0/local_installers/cuda_11.4.0_470.42.01_linux.run
+sudo sh cuda_11.4.0_470.42.01_linux.run
+```
+- Add CUDA to your PATH:
+```bash
+echo 'export PATH=/usr/local/cuda-11.4/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
+source ~/.bashrc
+```
+- Verify:
+```bash
+nvcc --version
+```
+
+#### 3. Install cuDNN 8.6.0 for CUDA 11.4
+- Download cuDNN 8.6.0 for CUDA 11.x from [NVIDIA cuDNN Archive](https://developer.nvidia.com/rdp/cudnn-archive).
+- Extract and copy files:
+```bash
+tar -xzvf cudnn-linux-x86_64-8.6.0.*.tgz
+sudo cp cuda/include/cudnn*.h /usr/local/cuda-11.4/include
+sudo cp cuda/lib64/libcudnn* /usr/local/cuda-11.4/lib64
+sudo chmod a+r /usr/local/cuda-11.4/include/cudnn*.h /usr/local/cuda-11.4/lib64/libcudnn*
+```
+- Verify:
+```bash
+cat /usr/local/cuda-11.4/include/cudnn_version.h | grep CUDNN_MAJOR -A 2
+```
+
+#### 4. Install TensorRT 8.5.2 for CUDA 11.4
+- Download TensorRT 8.5.2 tar file for Ubuntu 20.04 + CUDA 11.x from [NVIDIA TensorRT Archive](https://developer.nvidia.com/nvidia-tensorrt-archive).
+- Extract and install Python bindings:
+```bash
+tar -xzvf TensorRT-8.5.2.*.tar.gz
+cd TensorRT-8.5.2.*
+export TRT_LIBPATH=$(pwd)/lib
+export LD_LIBRARY_PATH=$TRT_LIBPATH:$LD_LIBRARY_PATH
+pip install python/tensorrt-8.5.2-*.whl
+```
+- (Optional) Install `uff`, `graphsurgeon`, and `onnx-graphsurgeon` from the TensorRT package if needed.
+
+#### 5. Verify Everything
+```bash
+nvidia-smi
+nvcc --version
+python -c "import torch; print(torch.cuda.is_available())"
+python -c "import tensorrt; print(tensorrt.__version__)"
+```
+
+**References:**
+- [CUDA 11.4 Downloads](https://developer.nvidia.com/cuda-11.4.0-download-archive)
+- [cuDNN Archive](https://developer.nvidia.com/rdp/cudnn-archive)
+- [TensorRT Archive](https://developer.nvidia.com/nvidia-tensorrt-archive)
+
 ## Configuration
 
 The pipeline is configured via `config/config.yaml`. Key configuration sections:
