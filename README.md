@@ -64,6 +64,115 @@ pip install -r requirements.txt
 # https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html
 ```
 
+## NVIDIA Driver, CUDA, cuDNN, and TensorRT Installation
+
+To use GPU acceleration and export to TensorRT, you must have the correct NVIDIA driver, CUDA toolkit, cuDNN, and TensorRT installed. Instructions below cover both RTX 3050 (laptop) and A100 (datacenter) GPUs.
+
+### 1. NVIDIA Driver
+
+- **RTX 3050 (Laptop):**  
+  Use the latest proprietary driver from Ubuntu's Additional Drivers or from NVIDIA’s website.
+  ```bash
+  sudo ubuntu-drivers autoinstall
+  # Or, for manual install:
+  # Download from https://www.nvidia.com/Download/index.aspx
+  ```
+
+- **A100 (Datacenter):**  
+  Use the latest datacenter driver from NVIDIA.
+  ```bash
+  # Download from https://www.nvidia.com/Download/index.aspx
+  # Or use your cluster's driver management tools
+  ```
+
+- **Verify installation:**
+  ```bash
+  nvidia-smi
+  ```
+
+### 2. CUDA Toolkit
+
+- **Recommended:** Use the version matching your PyTorch install (see https://pytorch.org/get-started/locally/).
+- **Install via apt (Ubuntu):**
+  ```bash
+  # Example for CUDA 12.1
+  sudo apt update
+  sudo apt install nvidia-cuda-toolkit
+  ```
+- **Or download from:**  
+  https://developer.nvidia.com/cuda-downloads
+
+- **Check CUDA version:**
+  ```bash
+  nvcc --version
+  ```
+
+### 3. cuDNN
+
+- **Download from:**  
+  https://developer.nvidia.com/cudnn  
+  (Requires free NVIDIA Developer account)
+
+- **Install (Ubuntu .deb):**
+  ```bash
+  # Example for cuDNN 8.x
+  sudo dpkg -i libcudnn8*.deb
+  sudo apt-get update
+  sudo apt-get install libcudnn8
+  ```
+
+- **Or, for Conda environments:**
+  ```bash
+  conda install -c conda-forge cudnn
+  ```
+
+### 4. TensorRT
+
+- **Download from:**  
+  https://developer.nvidia.com/tensorrt  
+  (Choose the version matching your CUDA and cuDNN)
+
+- **Install (Ubuntu .deb):**
+  ```bash
+  sudo dpkg -i nv-tensorrt-local-repo-ubuntu*.deb
+  sudo apt-get update
+  sudo apt-get install tensorrt
+  ```
+
+- **Or, for Conda environments:**
+  ```bash
+  conda install -c conda-forge tensorrt
+  ```
+
+- **Python bindings:**
+  ```bash
+  pip install tensorrt
+  ```
+
+### 5. Additional Tips
+
+- **For laptops (RTX 3050):**  
+  Use the latest drivers and CUDA toolkit supported by your GPU.  
+  If using Optimus (hybrid graphics), ensure you are running on the NVIDIA GPU (`prime-select nvidia`).
+
+- **For A100:**  
+  Use the datacenter driver and CUDA version recommended by your cluster admin or NVIDIA.
+
+- **Check all installations:**
+  ```bash
+  nvidia-smi
+  nvcc --version
+  python -c "import torch; print(torch.cuda.is_available())"
+  python -c "import tensorrt"
+  ```
+
+- **References:**  
+  - [NVIDIA Driver Downloads](https://www.nvidia.com/Download/index.aspx)  
+  - [CUDA Toolkit Downloads](https://developer.nvidia.com/cuda-downloads)  
+  - [cuDNN Downloads](https://developer.nvidia.com/cudnn)  
+  - [TensorRT Downloads](https://developer.nvidia.com/tensorrt)  
+  - [TensorRT Installation Guide](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html)
+
 ## Configuration
 
 The pipeline is configured via `config/config.yaml`. Key configuration sections:
