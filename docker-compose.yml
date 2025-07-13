@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  seg-det:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: seg-det-container
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      # Mount your dataset
+      - ./data:/app/data:ro
+      # Mount for model outputs
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./results:/app/results
+      - ./exports:/app/exports
+      # Mount config for easy modification
+      - ./config:/app/config:ro
+    ports:
+      - "6006:6006"  # TensorBoard
+    working_dir: /app
+    command: ["python", "main.py"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Development service with interactive shell
+  seg-det-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    container_name: seg-det-dev
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./results:/app/results
+      - ./exports:/app/exports
+      - ./config:/app/config:ro
+      - .:/app  # Mount source code for development
+    ports:
+      - "6006:6006"
+    working_dir: /app
+    command: ["/bin/bash"]
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu] 

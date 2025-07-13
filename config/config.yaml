@@ -4,16 +4,15 @@ dataset:
   train_split: "train"
   val_split: "valid"
   test_split: "test"
-  num_classes: 8
+  num_classes: 7
   class_names:
-    - "background"
-    - "strawberry"
-    - "leaf"
-    - "flower"
-    - "stem"
-    - "soil"
-    - "container"
-    - "other"
+    - "Angular Leafspot"
+    - "Anthracnose Fruit Rot"
+    - "Blossom Blight"
+    - "Gray Mold"
+    - "Leaf Spot"
+    - "Powdery Mildew Fruit"
+    - "Powdery Mildew Leaf"
 
 # Model Configuration
 model:
@@ -21,7 +20,7 @@ model:
   encoder: "resnet50"
   encoder_weights: "imagenet"
   in_channels: 3
-  classes: 8
+  classes: 7
   activation: "softmax"
 
 # Training Configuration
