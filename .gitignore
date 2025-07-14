@@ -67,4 +67,7 @@ Thumbs.db
 
 # Large files
 *.run
-cuda_*.run 
+cuda_*.run
+
+# Pip installation logs
+=* 
