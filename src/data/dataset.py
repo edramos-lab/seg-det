@@ -59,8 +59,24 @@ class StrawberrySegmentationDataset(Dataset):
         self.category_to_id = {cat['name']: cat['id'] for cat in self.coco_data['categories']}
         self.id_to_category = {cat['id']: cat['name'] for cat in self.coco_data['categories']}
         
+        # Create mapping from dataset categories to our 7 disease classes
+        # Map 'fruit' and 'Healthy Strawberry' to background (class 0)
+        # Map disease classes to their respective indices (1-6)
+        self.category_mapping = {
+            'fruit': 0,  # Background
+            'Healthy Strawberry': 0,  # Background
+            'Angular Leafspot': 1,
+            'Anthracnose Fruit Rot': 2,
+            'Blossom Blight': 3,
+            'Gray Mold': 4,
+            'Leaf Spot': 5,
+            'Powdery Mildew Fruit': 6,
+            'Powdery Mildew Leaf': 7
+        }
+        
         print(f"Loaded {len(self.images)} images for {split} split")
-        print(f"Categories: {list(self.category_to_id.keys())}")
+        print(f"Original categories: {list(self.category_to_id.keys())}")
+        print(f"Category mapping: {self.category_mapping}")
     
     def __len__(self) -> int:
         return len(self.images)
@@ -92,9 +108,12 @@ class StrawberrySegmentationDataset(Dataset):
                 segmentation = ann['segmentation'][0]  # COCO format
                 points = np.array(segmentation).reshape(-1, 2).astype(np.int32)
                 
-                # Fill polygon with category ID
-                category_id = ann['category_id']
-                cv2.fillPoly(mask, [points], category_id)
+                # Get category name and map to our class indices
+                category_name = self.id_to_category[ann['category_id']]
+                mapped_class_id = self.category_mapping.get(category_name, 0)  # Default to background
+                
+                # Fill polygon with mapped category ID
+                cv2.fillPoly(mask, [points], mapped_class_id)
         
         # Apply transforms
         if self.transform:
@@ -112,17 +131,30 @@ class StrawberrySegmentationDataset(Dataset):
             image = transformed['image']
             mask = transformed['mask']
         
-        # Convert mask to one-hot encoding
-        mask_onehot = torch.zeros(self.num_classes, mask.shape[0], mask.shape[1])
-        for i in range(self.num_classes):
-            mask_onehot[i] = (mask == i).float()
+        # Ensure mask values are within valid range (0 to num_classes-1)
+        if isinstance(mask, torch.Tensor):
+            mask = torch.clamp(mask, 0, self.num_classes - 1).long()
+        else:
+            mask = np.clip(mask, 0, self.num_classes - 1)
+            mask = torch.from_numpy(mask).long()
         
+        # Debug: Check mask values (only for first few samples)
+        if idx < 5:  # Only debug first 5 samples
+            if isinstance(mask, torch.Tensor):
+                unique_values = torch.unique(mask).cpu().numpy()
+                mask_min, mask_max = mask.min().item(), mask.max().item()
+            else:
+                unique_values = np.unique(mask)
+                mask_min, mask_max = mask.min(), mask.max()
+            print(f"Sample {idx}: Mask unique values: {unique_values}, range: [{mask_min}, {mask_max}], num_classes: {self.num_classes}")
+
         return {
             'image': image,
-            'mask': mask_onehot,
+            'mask': mask,
             'image_id': image_id,
             'file_name': img_info['file_name']
         }
+
 
 
 def get_transforms(config: Dict, split: str = "train") -> A.Compose:
@@ -148,21 +180,20 @@ def get_transforms(config: Dict, split: str = "train") -> A.Compose:
                 p=0.5
             ),
             A.RandomGamma(
-                gamma_limit=config['augmentation']['train']['random_gamma'],
+                gamma_limit=(1.0, 1.0 + config['augmentation']['train']['random_gamma']),
                 p=0.5
             ),
             A.GaussianBlur(
                 blur_limit=3,
                 p=config['augmentation']['train']['blur']
             ),
-            A.GaussNoise(
-                var_limit=10,
-                p=config['augmentation']['train']['noise']
-            ),
+            # A.GaussNoise(
+            #     var_limit=10.0,
+            #     p=config['augmentation']['train']['noise']
+            # ),
             A.ElasticTransform(
                 alpha=1,
                 sigma=50,
-                alpha_affine=50,
                 p=config['augmentation']['train']['elastic_transform']
             ),
             A.Normalize(),

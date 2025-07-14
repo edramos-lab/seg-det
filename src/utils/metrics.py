@@ -11,7 +11,7 @@ def calculate_dice_coefficient(pred: torch.Tensor, target: torch.Tensor, smooth:
     
     Args:
         pred: Predicted masks (B, C, H, W) or (B, H, W)
-        target: Ground truth masks (B, C, H, W) or (B, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         smooth: Smoothing factor
         
     Returns:
@@ -19,8 +19,6 @@ def calculate_dice_coefficient(pred: torch.Tensor, target: torch.Tensor, smooth:
     """
     if pred.dim() == 4:
         pred = torch.argmax(pred, dim=1)
-    if target.dim() == 4:
-        target = torch.argmax(target, dim=1)
     
     pred_flat = pred.view(-1)
     target_flat = target.view(-1)
@@ -38,7 +36,7 @@ def calculate_iou(pred: torch.Tensor, target: torch.Tensor, smooth: float = 1e-6
     
     Args:
         pred: Predicted masks (B, C, H, W) or (B, H, W)
-        target: Ground truth masks (B, C, H, W) or (B, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         smooth: Smoothing factor
         
     Returns:
@@ -46,8 +44,6 @@ def calculate_iou(pred: torch.Tensor, target: torch.Tensor, smooth: float = 1e-6
     """
     if pred.dim() == 4:
         pred = torch.argmax(pred, dim=1)
-    if target.dim() == 4:
-        target = torch.argmax(target, dim=1)
     
     pred_flat = pred.view(-1)
     target_flat = target.view(-1)
@@ -65,7 +61,7 @@ def calculate_precision_recall(pred: torch.Tensor, target: torch.Tensor, smooth:
     
     Args:
         pred: Predicted masks (B, C, H, W) or (B, H, W)
-        target: Ground truth masks (B, C, H, W) or (B, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         smooth: Smoothing factor
         
     Returns:
@@ -73,8 +69,6 @@ def calculate_precision_recall(pred: torch.Tensor, target: torch.Tensor, smooth:
     """
     if pred.dim() == 4:
         pred = torch.argmax(pred, dim=1)
-    if target.dim() == 4:
-        target = torch.argmax(target, dim=1)
     
     pred_flat = pred.view(-1)
     target_flat = target.view(-1)
@@ -92,15 +86,13 @@ def calculate_accuracy(pred: torch.Tensor, target: torch.Tensor) -> float:
     
     Args:
         pred: Predicted masks (B, C, H, W) or (B, H, W)
-        target: Ground truth masks (B, C, H, W) or (B, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         
     Returns:
         Pixel accuracy
     """
     if pred.dim() == 4:
         pred = torch.argmax(pred, dim=1)
-    if target.dim() == 4:
-        target = torch.argmax(target, dim=1)
     
     correct = (pred == target).sum()
     total = pred.numel()
@@ -115,14 +107,14 @@ def calculate_class_metrics(pred: torch.Tensor, target: torch.Tensor, num_classe
     
     Args:
         pred: Predicted masks (B, C, H, W)
-        target: Ground truth masks (B, C, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         num_classes: Number of classes
         
     Returns:
         Dictionary of per-class metrics
     """
     pred_indices = torch.argmax(pred, dim=1)
-    target_indices = torch.argmax(target, dim=1)
+    target_indices = target
     
     metrics = {}
     
@@ -203,14 +195,14 @@ def calculate_confusion_matrix(pred: torch.Tensor, target: torch.Tensor, num_cla
     
     Args:
         pred: Predicted masks (B, C, H, W)
-        target: Ground truth masks (B, C, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         num_classes: Number of classes
         
     Returns:
         Confusion matrix
     """
     pred_indices = torch.argmax(pred, dim=1)
-    target_indices = torch.argmax(target, dim=1)
+    target_indices = target
     
     pred_flat = pred_indices.view(-1).cpu().numpy()
     target_flat = target_indices.view(-1).cpu().numpy()
@@ -224,7 +216,7 @@ def calculate_mean_metrics(pred: torch.Tensor, target: torch.Tensor, num_classes
     
     Args:
         pred: Predicted masks (B, C, H, W)
-        target: Ground truth masks (B, C, H, W)
+        target: Ground truth masks (B, H, W) - class indices
         num_classes: Number of classes
         
     Returns:

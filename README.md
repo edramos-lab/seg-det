@@ -884,6 +884,18 @@ logging:
 3. **TensorRT installation issues**: Ensure CUDA version compatibility
 4. **Docker GPU issues**: Install NVIDIA Docker runtime
 
+### CUDA Debugging
+
+If you encounter CUDA errors during training, enable detailed debugging:
+
+```bash
+# Enable CUDA launch blocking for detailed error messages
+export CUDA_LAUNCH_BLOCKING=1
+./run_pipeline.sh train
+```
+
+This will provide more precise error locations and help identify the source of CUDA assertion failures.
+
 ### GPU Memory Optimization
 
 ```yaml
