@@ -1,83 +1,67 @@
-# Multi-stage Dockerfile for Strawberry Semantic Segmentation
-# Stage 1: Base CUDA environment
-FROM nvidia/cuda:11.8-devel-ubuntu20.04 as base
+# ---------- STAGE 1: Build environment ----------
+    FROM nvcr.io/nvidia/tensorrt:22.11-py3 as build-env
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV CUDA_HOME=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    python3.9 \
-    python3.9-dev \
-    python3-pip \
-    git \
-    wget \
-    curl \
-    build-essential \
-    cmake \
-    pkg-config \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgcc-s1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create symbolic link for python
-RUN ln -s /usr/bin/python3.9 /usr/bin/python
-
-# Stage 2: Python environment setup
-FROM base as python-env
-
-# Set working directory
-WORKDIR /app
-
-# Copy requirements first for better caching
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip3 install --no-cache-dir torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu118 --index-url https://download.pytorch.org/whl/cu118
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Stage 3: Application setup
-FROM python-env as app
-
-# Copy application code
-COPY . /app/
-
-# Create necessary directories
-RUN mkdir -p /app/models /app/logs /app/results /app/exports /app/data
-
-# Set permissions
-RUN chmod +x /app/run_pipeline.sh
-
-# Stage 4: Production image
-FROM app as production
-
-# Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Set working directory
-WORKDIR /app
-
-# Expose port for TensorBoard (if needed)
-EXPOSE 6006
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import torch; print('OK' if torch.cuda.is_available() else 'CUDA not available')" || exit 1
-
-# Default command
-CMD ["python", "main.py"] 
+    ENV DEBIAN_FRONTEND=noninteractive \
+        PYTHONUNBUFFERED=1 \
+        PYTHONDONTWRITEBYTECODE=1 \
+        CUDA_HOME=/usr/local/cuda \
+        PATH=$CUDA_HOME/bin:$PATH \
+        LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH \
+        TENSORRT_VERSION=8.5.3.1 \
+        CUDA_VERSION=11.4
+    
+    # System dependencies
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3.8 python3.8-dev python3-pip \
+        build-essential cmake git wget curl \
+        libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx \
+        && rm -rf /var/lib/apt/lists/*
+    
+    RUN ln -sf /usr/bin/python3.8 /usr/bin/python
+    
+    WORKDIR /app
+    COPY requirements.txt .
+    COPY . .
+    
+    
+    # TensorRT Python bindings are already installed in the base image
+    
+    # Optional: install torch2trt if needed
+    # RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt && \
+    #     cd torch2trt && python setup.py install && cd .. && rm -rf torch2trt
+    
+    # Install remaining Python deps
+    RUN pip install --no-cache-dir -r requirements.txt
+    
+    # ---------- STAGE 2: Runtime environment ----------
+FROM nvcr.io/nvidia/tensorrt:22.11-py3 as production
+    
+    # Minimal system dependencies
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+        libglib2.0-0 libsm6 libxext6 libxrender1 libgl1-mesa-glx \
+        && rm -rf /var/lib/apt/lists/*
+    
+    # Add non-root user
+    RUN useradd -m -u 1000 appuser
+    USER appuser
+    WORKDIR /app
+    
+    # Copy environment from build stage
+    COPY --from=build-env --chown=appuser:appuser /usr/local/lib/python3.8 /usr/local/lib/python3.8
+    COPY --from=build-env --chown=appuser:appuser /usr/lib/python3.8 /usr/lib/python3.8
+    COPY --from=build-env --chown=appuser:appuser /usr/local/bin/pip /usr/local/bin/pip
+    
+    # Copy application code
+    COPY --from=build-env --chown=appuser:appuser /app /app
+    
+    # Final setup
+    RUN mkdir -p /app/models /app/logs /app/results /app/exports /app/data
+    RUN chmod +x /app/run_pipeline.sh
+    
+    EXPOSE 6006
+    
+    HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+        CMD python -c "import torch; print('OK' if torch.cuda.is_available() else 'FAIL')" || exit 1
+    
+    CMD ["python", "main.py"]
+    

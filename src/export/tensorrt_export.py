@@ -5,9 +5,15 @@ import os
 import json
 import time
 from typing import Dict, Tuple, Optional, List
-import tensorrt as trt
-import pycuda.driver as cuda
-import pycuda.autoinit
+
+try:
+    import tensorrt as trt
+    import pycuda.driver as cuda
+    import pycuda.autoinit
+    TENSORRT_AVAILABLE = True
+except ImportError:
+    TENSORRT_AVAILABLE = False
+    print("Warning: TensorRT not available. TensorRT export functionality will be disabled.")
 
 
 class TensorRTExporter:
@@ -22,6 +28,9 @@ class TensorRTExporter:
         Args:
             config: Configuration dictionary
         """
+        if not TENSORRT_AVAILABLE:
+            raise ImportError("TensorRT is not available. Please install TensorRT to use this functionality.")
+        
         self.config = config
         self.logger = trt.Logger(trt.Logger.WARNING)
         self.builder = trt.Builder(self.logger)
@@ -384,33 +393,53 @@ def export_onnx_to_tensorrt(
     Returns:
         Dictionary containing export results
     """
-    exporter = TensorRTExporter(config)
+    if not TENSORRT_AVAILABLE:
+        print("Warning: TensorRT export skipped - TensorRT not available")
+        return {
+            'engine_path': None,
+            'engine_info': None,
+            'benchmark_results': None,
+            'comparison_passed': False,
+            'error': 'TensorRT not available'
+        }
     
-    # Build TensorRT engine
-    engine_path = exporter.build_engine_from_onnx(
-        onnx_path=onnx_path,
-        output_path=output_path,
-        fp16=fp16
-    )
-    
-    # Get engine info
-    engine_info = exporter.get_engine_info(engine_path)
-    
-    results = {
-        'engine_path': engine_path,
-        'engine_info': engine_info,
-        'benchmark_results': None,
-        'comparison_passed': False
-    }
-    
-    # Benchmark engine
-    if benchmark:
-        results['benchmark_results'] = exporter.benchmark_inference(engine_path)
-    
-    # Compare with PyTorch model
-    if compare and pytorch_model is not None:
-        results['comparison_passed'] = exporter.compare_pytorch_tensorrt(
-            pytorch_model, engine_path
+    try:
+        exporter = TensorRTExporter(config)
+        
+        # Build TensorRT engine
+        engine_path = exporter.build_engine_from_onnx(
+            onnx_path=onnx_path,
+            output_path=output_path,
+            fp16=fp16
         )
-    
-    return results 
+        
+        # Get engine info
+        engine_info = exporter.get_engine_info(engine_path)
+        
+        results = {
+            'engine_path': engine_path,
+            'engine_info': engine_info,
+            'benchmark_results': None,
+            'comparison_passed': False
+        }
+        
+        # Benchmark engine
+        if benchmark:
+            results['benchmark_results'] = exporter.benchmark_inference(engine_path)
+        
+        # Compare with PyTorch model
+        if compare and pytorch_model is not None:
+            results['comparison_passed'] = exporter.compare_pytorch_tensorrt(
+                pytorch_model, engine_path
+            )
+        
+        return results
+    except Exception as e:
+        print(f"Error during TensorRT export: {e}")
+        return {
+            'engine_path': None,
+            'engine_info': None,
+            'benchmark_results': None,
+            'comparison_passed': False,
+            'error': str(e)
+        } 

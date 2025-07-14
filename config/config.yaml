@@ -1,6 +1,6 @@
 # Dataset Configuration
 dataset:
-  root_path: "/home/edramos/Documents/datasets/Strawberry-segmentation-synthetic"
+  root_path: "/app/data"
   train_split: "train"
   val_split: "valid"
   test_split: "test"
@@ -26,7 +26,7 @@ model:
 
 # Training Configuration
 training:
-  batch_size: 8
+  batch_size: 2
   num_epochs: 10
   learning_rate: 0.001
   weight_decay: 0.0001
@@ -86,6 +86,6 @@ export:
 # Hardware
 hardware:
   device: "cuda"
-  num_workers: 4
-  pin_memory: true
+  num_workers: 0
+  pin_memory: false
   mixed_precision: true 
