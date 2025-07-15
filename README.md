@@ -152,6 +152,63 @@ The Docker container mounts the following directories:
 - `./exports` → `/app/exports` (exported models)
 - `./config` → `/app/config` (configuration files, read-only)
 
+### Running Training Pipeline in Docker
+
+To train and evaluate the model using Docker, mount your dataset and map output folders for easy access:
+
+```bash
+docker run --gpus all --rm -it \
+  -v /home/edramos/Documents/datasets/Strawberry-segmentation-synthetic:/app/data \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/src:/app/src \
+  -v $(pwd)/local_results/results:/app/results \
+  -v $(pwd)/local_results/models:/app/models \
+  --name seg-det seg-det:latest \
+  python main.py
+```
+
+- **/app/data**: Your dataset (COCO format expected)
+- **/app/results**: Training/evaluation results (plots, metrics)
+- **/app/models**: Saved models and exports
+
+> **Tip:** All files written to `/app/results` and `/app/models` in the container will appear in your local `local_results/results` and `local_results/models` folders.
+
+---
+
+### Benchmarking Inference with ONNX and TensorRT
+
+To benchmark inference speed and performance of exported ONNX and TensorRT models on your test set, use the provided `benchmark_inference.py` script. This will generate plots and metrics for both ONNX and TensorRT inference.
+
+**Recommended folder structure for local mapping:**
+- `local_results/results` → `/app/results` (for plots and metrics)
+- `local_results/models` → `/app/models` (for ONNX/TensorRT models)
+
+**Run the benchmark script in Docker:**
+
+```bash
+docker run --gpus all --rm -it \
+  -v /home/edramos/Documents/datasets/Strawberry-segmentation-synthetic:/app/data \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/src:/app/src \
+  -v $(pwd):/app/workspace \
+  -v $(pwd)/local_results/results:/app/results \
+  -v $(pwd)/local_results/models:/app/models \
+  --name seg-det-benchmark seg-det:latest \
+  python /app/workspace/benchmark_inference.py
+```
+
+- **/app/workspace**: Mounts your project root so the script is available in the container.
+- **/app/results**: All benchmark plots and metrics will be saved here (locally in `local_results/results/benchmark/`).
+- **/app/models**: The ONNX and TensorRT models to be benchmarked.
+
+**Output:**
+- Plots: Inference time distribution, FPS over time, detections per image, time breakdown (preprocessing, inference, postprocessing)
+- Metrics: Average inference time, FPS, detections per image (printed in console and saved as plots)
+
+> **Note:** Make sure your dataset and exported models are available in the mapped folders before running the benchmark.
+
+---
+
 ### Environment Variables
 
 The container supports the following environment variables:
